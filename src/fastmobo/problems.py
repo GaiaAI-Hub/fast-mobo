@@ -7,6 +7,8 @@ import torch
 
 class FastMoboProblem(MultiObjectiveTestProblem):
     """ Custom multi-objective problem wrapper """
+
+    dim: int 
     
     def __init__(self, 
                  objective_func: Callable[[Tensor], Tensor],
@@ -15,6 +17,7 @@ class FastMoboProblem(MultiObjectiveTestProblem):
                  num_objectives: int,
                  noise_std: Optional[torch.Tensor] = None,
                  negate: bool = True,
+                 dim: int = None,
                  max_hv: Optional[float] = None):
         """
         Args:
@@ -24,6 +27,7 @@ class FastMoboProblem(MultiObjectiveTestProblem):
             num_objectives: Number of objectives
             noise_std: Standard deviation of observation noise
             negate: Whether to negate objectives (for maximization)
+            dim: Dimension of problem (Search space dimension)
             max_hv: Maximum achievable hypervolume (for plotting)
         """
         self.objective_func = objective_func
@@ -33,7 +37,7 @@ class FastMoboProblem(MultiObjectiveTestProblem):
         self.noise_std = noise_std if noise_std is not None else torch.zeros(num_objectives)
         self.negate = negate
         self._max_hv = max_hv
-        self.dim = bounds.shape[1]
+        self.dim = dim or bounds.shape[1]
     
     @property
     def max_hv(self) -> float:
@@ -58,6 +62,7 @@ class FastMoboProblem(MultiObjectiveTestProblem):
 
     def __call__(self, X: Tensor):
         return self._evaluate_true(X)
+    
     def _evaluate_true(self, X: Tensor):
         obj = self.objective_func(X)
         return -obj if self.negate else obj

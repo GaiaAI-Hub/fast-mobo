@@ -1,6 +1,6 @@
 [project]
 name = "fastmobo"
-version = "0.1.0"
+version = "0.1.1"
 description = "Multi-objective Bayesian optimization Framework (Botorch Wrapper)"
 authors = [
     {name = "abdelrahman abounida", email = "abdelrahmanaboneda@gmail.com"},
@@ -14,6 +14,10 @@ license = {text = "MIT"}
 requires = ["pdm-backend"]
 build-backend = "pdm.backend"
 
-
 [tool.pdm]
 distribution = true
+
+[dependency-groups]
+test = [
+    "pytest>=8.3.5",
+]
