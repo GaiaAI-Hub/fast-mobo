@@ -154,8 +154,8 @@ class FastMobo:
                  train_x: Optional[torch.Tensor] = None,
                  train_y: Optional[torch.Tensor] = None,
                  acquisition_functions: Optional[list[str]] = None,
-                 bounds: Optional[torch.Tensor] = None,
-                 ref_point: Optional[torch.Tensor] = None,
+                 bounds: Optional[torch.Tensor] = None, # TODO;: already got from problem 
+                 ref_point: Optional[torch.Tensor] = None, # TODO;: already got from problem 
                  batch_size: int = 4,
                  num_restarts: int = 10,
                  raw_samples: int = 512,
