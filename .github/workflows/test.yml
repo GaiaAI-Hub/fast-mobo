@@ -42,7 +42,7 @@ jobs:
           cache-dependency-path: "**/pdm.lock"
 
       - name: Install dependencies
-        run: pdm install
+        run: pdm install --with test
 
       - name: Run unit tests
         run: pdm run pytest
