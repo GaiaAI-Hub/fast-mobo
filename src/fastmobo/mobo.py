@@ -24,13 +24,17 @@ from botorch.sampling.base import MCSampler
 from matplotlib.cm import ScalarMappable
 from botorch import fit_gpytorch_mll
 from dataclasses import dataclass
-from typing import Optional, Any
+from typing import Optional, Any, TYPE_CHECKING
 import matplotlib.pyplot as plt
 from loguru import logger
 import numpy as np
 import warnings
 import torch
 import time
+
+if TYPE_CHECKING:
+    from botorch.models.model import Model as BotorchModel
+    from gpytorch.module import Module as GPyTorchModule
 
 
 warnings.filterwarnings("ignore", category=BadInitialCandidatesWarning)
@@ -80,41 +84,29 @@ class OptimizationResult:
     
     def plot_objectives(self, save_path: Optional[str] = None):
         """Plot objective space exploration"""
-        # TODO:: load objectives names from problem
         n_methods = len(self.train_obj_true)
         fig, axes = plt.subplots(1, n_methods, figsize=(6*n_methods, 5), 
                                 sharex=True, sharey=True)
         if n_methods == 1:
             axes = [axes]
-        
-        # Create batch coloring - fixed calculation
-        first_method = list(self.train_obj_true.keys())[0]
-        n_total = len(self.train_obj_true[first_method])
-        n_initial = n_total // (self.n_iterations + 1)
-        batch_size = (n_total - n_initial) // self.n_iterations
-        
-        # Create batch numbers for coloring
-        batch_numbers = []
-        batch_numbers.extend([0] * n_initial)  # Initial points
-        for i in range(1, self.n_iterations + 1):
-            batch_numbers.extend([i] * batch_size)
-        
+
         cm = plt.get_cmap("viridis")
-        
+
         for i, (method, train_obj) in enumerate(self.train_obj_true.items()):
             obj_np = train_obj.cpu().numpy()
-            sc = axes[i].scatter(
-                obj_np[:, 0],
-                obj_np[:, 1],
-                c=batch_numbers[:len(train_obj)],
-                alpha=0.8,
-                cmap=cm
-            )
+            n_total = len(obj_np)
+
+            batch_numbers = np.linspace(0, self.n_iterations, n_total)
+
+            # ensure lengths match
+            assert len(batch_numbers) == n_total, \
+                f"Length mismatch: batch_numbers={len(batch_numbers)}, data={n_total}"
+
             axes[i].set_title(method)
             axes[i].set_xlabel("Objective 1")
             if i == 0:
                 axes[i].set_ylabel("Objective 2")
-        
+
         # Add colorbar
         norm = plt.Normalize(0, self.n_iterations)
         sm = ScalarMappable(norm=norm, cmap=cm)
@@ -123,11 +115,10 @@ class OptimizationResult:
         cbar_ax = fig.add_axes([0.92, 0.15, 0.02, 0.7])
         cbar = fig.colorbar(sm, cax=cbar_ax)
         cbar.ax.set_title("Iteration")
-        
+
         if save_path:
             plt.savefig(save_path, dpi=300, bbox_inches='tight')
         plt.show()
-
 class OptimizationStorage:
     """Custom storage class for optimization data"""
     
@@ -311,7 +302,7 @@ class FastMobo:
         """Set initial training data (useful for warm-starting)"""
         self._validate_and_set_initial_data(train_x, train_y)
     
-    def initialize_model(self, train_x: torch.Tensor, train_y: torch.Tensor) -> tuple[Any, Any]:
+    def initialize_model(self, train_x: torch.Tensor, train_y: torch.Tensor) -> tuple[GPyTorchModule, BotorchModel]:
         """Initialize GP model"""
         train_x_normalized = normalize(train_x, self.problem.bounds)
         models = []
@@ -451,7 +442,7 @@ class FastMobo:
         train_obj_true_init = self.problem(train_x_init)
         
         # Storage for results using custom storage class
-        results = {}
+        results: dict[str, OptimizationStorage] = {}
         models = {}
         mlls = {}
         hypervolumes = {}
