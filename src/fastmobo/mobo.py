@@ -1,5 +1,5 @@
 
-
+from __future__ import annotations
 from botorch.utils.multi_objective.box_decompositions.non_dominated import FastNondominatedPartitioning
 from botorch.utils.multi_objective.box_decompositions.dominated import DominatedPartitioning
 from botorch.utils.multi_objective.scalarization import get_chebyshev_scalarization
