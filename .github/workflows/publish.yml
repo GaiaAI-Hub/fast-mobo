@@ -42,3 +42,7 @@ jobs:
         run: pdm publish
 # git tag -a v0.1.4 -m "V0.1.4"
 # git push origin v0.1.4
+
+# to publish
+# 1. pump version in pyproject.toml
+# 2. run publish.sh
