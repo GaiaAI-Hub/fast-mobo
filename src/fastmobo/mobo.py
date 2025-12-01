@@ -146,8 +146,19 @@ class OptimizationResult:
             plt.savefig(save_path, dpi=300, bbox_inches='tight')
         plt.show()
     
-    def plot_objectives(self, save_path: Optional[str] = None):
-        """Plot objective space exploration with proper color mapping"""
+    def plot_objectives(self, 
+                        objective_names: Optional[list[str]] = None,
+                        problem: Optional[FastMoboProblem] = None,
+                        save_path: Optional[str] = None):
+        """Plot objective space exploration with proper color mapping
+        
+        Args:
+            objective_names: List of objective names (e.g., ['Cost', 'Accuracy'])
+                            If None, tries to get from problem.objective_names, 
+                            otherwise uses generic labels
+            problem: FastMoboProblem instance to extract objective names from
+            save_path: Path to save the figure
+        """
         n_methods = len(self.train_obj_true)
         fig, axes = plt.subplots(1, n_methods, figsize=(6*n_methods, 5), 
                                 sharex=True, sharey=True)
@@ -156,6 +167,16 @@ class OptimizationResult:
 
         cm = plt.get_cmap("viridis")
         norm = plt.Normalize(0, self.n_iterations)
+        
+        # Determine axis labels with priority: objective_names > problem.objective_names > default
+        if objective_names is None:
+            if problem is not None and hasattr(problem, 'objective_names'):
+                objective_names = problem.objective_names
+            else:
+                objective_names = [f"Objective {i+1}" for i in range(2)]
+        
+        if len(objective_names) < 2:
+            raise ValueError(f"Need at least 2 objective names, got {len(objective_names)}")
 
         for i, (method, train_obj) in enumerate(self.train_obj_true.items()):
             obj_np = train_obj.cpu().numpy()
@@ -183,9 +204,9 @@ class OptimizationResult:
             )
             
             axes[i].set_title(method, fontsize=12, fontweight='bold')
-            axes[i].set_xlabel("Objective 1", fontsize=11)
+            axes[i].set_xlabel(objective_names[0], fontsize=11)
             if i == 0:
-                axes[i].set_ylabel("Objective 2", fontsize=11)
+                axes[i].set_ylabel(objective_names[1], fontsize=11)
             axes[i].grid(True, alpha=0.3)
 
         fig.subplots_adjust(right=0.9)
@@ -198,7 +219,6 @@ class OptimizationResult:
         if save_path:
             plt.savefig(save_path, dpi=300, bbox_inches='tight')
         plt.show()
-
 
 class OptimizationStorage:
     """Efficient storage for optimization data"""
