@@ -252,12 +252,12 @@ class FastMobo:
                  maxiter: int = 200,
                  batch_limit: int = 5,
                  n_initial: Optional[int] = None,
-                 device: str = "cpu",
+                 device: str = "cpu", # Legacy
                  dtype: torch.dtype = torch.double):
         
-        self.device = device
         self.dtype = dtype
-        self.tkwargs = {"device": device, "dtype": dtype}
+        self.tkwargs = {"device": torch.device("cuda" if torch.cuda.is_available() else "cpu") , 
+                        "dtype": dtype}
         self.problem = problem
         
         if acquisition_functions is None:
@@ -314,7 +314,7 @@ class FastMobo:
             bounds=self.problem.bounds, n=n, q=1
         ).squeeze(1)
         train_y_true = self.problem(train_x)
-        train_y_noisy = train_y_true + torch.randn_like(train_y_true) * self.noise_se
+        train_y_noisy = train_y_true + torch.randn_like(train_y_true, **self.tkwargs) * self.noise_se
         return train_x, train_y_noisy
 
     def get_initial_data(self) -> tuple[torch.Tensor, torch.Tensor]:
@@ -323,26 +323,27 @@ class FastMobo:
             return self.initial_data
         return self.generate_initial_data()
     
-    def initialize_model(self, train_x: torch.Tensor, train_y: torch.Tensor) -> tuple[GPyTorchModule, BotorchModel]:
+    def initialize_model(self, train_x: torch.Tensor, train_y: torch.Tensor):
         """Initialize GP model"""
-        train_x_normalized = normalize(train_x, self.problem.bounds)
-        models = []
+        bounds = self.problem.bounds.to(train_x.device)
+        train_x_normalized = normalize(train_x, bounds)
         
+        models = []
         for i in range(train_y.shape[-1]):
             train_y_i = train_y[..., i:i+1]
-            train_yvar = torch.full_like(train_y_i, self.noise_se[i] ** 2)
+            train_y_var = torch.full_like(train_y_i, self.noise_se[i] ** 2)
             models.append(
                 SingleTaskGP(
-                    train_x_normalized, 
-                    train_y_i, 
-                    train_yvar,
+                    train_x_normalized,
+                    train_y_i,
+                    train_y_var,
                     outcome_transform=Standardize(m=1)
                 )
             )
-        
         model = ModelListGP(*models)
         mll = SumMarginalLogLikelihood(model.likelihood, model)
         return mll, model
+
     
     def _generate_new_candidates(self, new_x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """Generate new objective values for candidates"""
