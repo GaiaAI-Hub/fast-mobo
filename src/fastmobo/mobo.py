@@ -337,7 +337,7 @@ class FastMobo:
                     train_x_normalized,
                     train_y_i,
                     train_y_var,
-                    outcome_transform=Standardize(m=1)
+                    outcome_transform=Standardize(m=1),
                 )
             )
         model = ModelListGP(*models)
